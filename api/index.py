@@ -185,7 +185,7 @@ def send_email_with_results(recipient_email, compound_count, csv_content):
         return False
 
 
-def process_and_email_results(compounds_input, percentage, recipient_email):
+def process_and_email_results(compounds_input, percentage, recipient_email, names_mapping=None):
     """Process compounds and send results via email - runs in background thread"""
     try:
         all_classification_results = {}
@@ -277,7 +277,7 @@ def process_and_email_results(compounds_input, percentage, recipient_email):
         ]
         
         csv_lines = []
-        headers = ['Compound (SMILES)', 'Modulator Type', 'AC50 Range'] + descriptor_headers
+        headers = ['Compound (SMILES)', 'Name', 'Modulator Type', 'AC50 Range'] + descriptor_headers
         csv_lines.append(','.join(headers))
         
         for smiles, classification in all_classification_results.items():
@@ -286,12 +286,14 @@ def process_and_email_results(compounds_input, percentage, recipient_email):
                 reg_data = all_regression_results[smiles]
                 ac50_display = f"Median: {reg_data['regression_AC50_median']:.2f}; Range: [{reg_data['regression_AC50_lower_bound']:.2f} - {reg_data['regression_AC50_upper_bound']:.2f}]"
             
+            compound_name = (names_mapping or {}).get(smiles, '')
+            
             descriptor_values = []
             for header in descriptor_headers:
                 val = all_descriptors_results.get(smiles, {}).get(header, 0.0)
                 descriptor_values.append(f"{val:.4f}")
             
-            row = [smiles, classification, ac50_display] + descriptor_values
+            row = [smiles, compound_name, classification, ac50_display] + descriptor_values
             csv_lines.append(','.join([f'"{field}"' if ',' in str(field) else str(field) for field in row]))
         
         csv_content = '\n'.join(csv_lines)
@@ -337,6 +339,7 @@ def predict():
     user_email = data.get("email")
     user_name = data.get("name")
     user_affiliation = data.get("affiliation")
+    names_mapping = data.get("names", {})
 
     if not isinstance(compounds_input, list):
         if isinstance(compounds_input, str):
@@ -515,7 +518,7 @@ def predict():
         ]
         
         csv_lines = []
-        headers = ['Compound (SMILES)', 'Modulator Type', 'AC50 Range'] + descriptor_headers
+        headers = ['Compound (SMILES)', 'Name', 'Modulator Type', 'AC50 Range'] + descriptor_headers
         csv_lines.append(','.join(headers))
         
         for smiles, classification in all_classification_results.items():
@@ -524,12 +527,14 @@ def predict():
                 reg_data = all_regression_results[smiles]
                 ac50_display = f"Median: {reg_data['regression_AC50_median']:.2f}; Range: [{reg_data['regression_AC50_lower_bound']:.2f} - {reg_data['regression_AC50_upper_bound']:.2f}]"
             
+            compound_name = names_mapping.get(smiles, '')
+            
             descriptor_values = []
             for header in descriptor_headers:
                 val = all_descriptors_results.get(smiles, {}).get(header, 0.0)
                 descriptor_values.append(f"{val:.4f}")
             
-            row = [smiles, classification, ac50_display] + descriptor_values
+            row = [smiles, compound_name, classification, ac50_display] + descriptor_values
             csv_lines.append(','.join([f'"{field}"' if ',' in str(field) else str(field) for field in row]))
         
         csv_content = '\n'.join(csv_lines)
